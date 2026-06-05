@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Command Center Pemberdayaan RZ Sumut (Final)</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary: #f97316;
+            --primary-light: #fdba74;
+            --primary-dark: #c2410c;
+            --bg-color: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 20px 30px -10px rgba(0, 0, 0, 0.15);
+            
+            --c-edu: #0ea5e9;
+            --c-health: #ec4899;
+            --c-eco: #eab308;
+            --c-anak: #8b5cf6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        body { display: flex; flex-direction: row; height: 100vh; background-color: var(--bg-color); color: var(--text-main); overflow: hidden; }
+
+        /* --- LAYOUT --- */
+        .sidebar { width: 420px; flex-shrink: 0; background: var(--surface); height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--border); z-index: 1000; box-shadow: var(--shadow-lg); position: relative; }
+        .main-content { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; position: relative; }
+        .map-section { flex: 1; min-height: 0; position: relative; }
+        #map { width: 100%; height: 100%; background: #e2e8f0; z-index: 1; }
+
+        /* --- SIDEBAR HEADER --- */
+        .sidebar-header { padding: 28px 24px 20px; border-bottom: 1px solid var(--border); background: linear-gradient(145deg, #ffffff, #fff7ed); position: relative; }
+        .sidebar-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--primary), var(--c-anak), var(--c-edu)); }
+        
+        .brand-logo { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .icon-box { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3); }
+        .brand-text h2 { font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1.2; letter-spacing: -0.5px; }
+        .brand-text span { font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1.5px; }
+
+        /* Search Input */
+        .search-box { position: relative; }
+        .search-box input { width: 100%; padding: 14px 16px 14px 44px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-color); color: var(--text-main); font-size: 0.95rem; font-weight: 600; outline: none; transition: all 0.3s; }
+        .search-box input:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1); }
+        .search-box i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.1rem; }
+
+        /* --- LIST CONTAINER --- */
+        .list-container { flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth; }
+        .list-container::-webkit-scrollbar { width: 8px; }
+        .list-container::-webkit-scrollbar-track { background: var(--bg-color); }
+        .list-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid var(--bg-color); }
+        
+        .cardItem { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
+        .cardItem:hover { border-color: transparent; box-shadow: var(--shadow-md); transform: translateY(-4px); }
+        .cardItem::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary); transition: width 0.3s; opacity: 0.8; }
+        .cardItem:hover::before { width: 6px; opacity: 1; }
+        
+        .cardItem h3 { font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px; }
+        .cardItem p { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; line-height: 1.4; }
+        
+        .card-stats { display: flex; gap: 12px; font-size: 0.8rem; font-weight: 700; background: var(--bg-color); padding: 10px 12px; border-radius: 10px; align-items: center; justify-content: space-between; }
+        .card-stats .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; color: white; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-stats .pic-name { color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+
+        /* --- BOTTOM ANALYTICS PANEL --- */
+        .analytics-panel { flex-shrink: 0; height: 260px; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding: 20px; gap: 20px; box-shadow: 0 -10px 30px rgba(0,0,0,0.05); z-index: 500; overflow-x: auto; overflow-y: hidden; }
+        
+        .metric-card { flex: 1; min-width: 200px; background: var(--surface); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: transform 0.3s; }
+        .metric-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .metric-card h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 12px; }
+        .metric-card .value { font-size: 3rem; font-weight: 800; color: var(--text-main); line-height: 1; margin-bottom: 8px; }
+        .metric-card .icon-bg { position: absolute; right: -15px; bottom: -25px; font-size: 7rem; color: rgba(15, 23, 42, 0.04); z-index: 0; transition: transform 0.5s; }
+        .metric-card:hover .icon-bg { transform: scale(1.1) rotate(-10deg); }
+        .metric-card * { z-index: 1; position: relative; }
+        
+        .chart-container { flex: 2; max-width: 600px; height: 100%; background: var(--surface); border-radius: 20px; padding: 15px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; position: relative; }
+
+        /* --- MAP CONTROLS & MARKERS --- */
+        .map-controls { position: absolute; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 12px; background: rgba(255,255,255,0.9); padding: 8px; border-radius: 14px; backdrop-filter: blur(10px); box-shadow: var(--shadow-md); border: 1px solid rgba(255,255,255,0.5); }
+        .control-btn { background: transparent; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s; color: var(--text-muted); }
+        .control-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4); }
+        .control-btn:hover:not(.active) { background: var(--bg-color); color: var(--text-main); }
+
+        .custom-marker { display: flex; justify-content: center; align-items: center; width: 42px; height: 42px; border-radius: 50%; color: white; font-size: 18px; border: 3px solid white; box-shadow: 0 6px 15px rgba(0,0,0,0.3); transition: all 0.3s; }
+        .custom-marker:hover { transform: scale(1.15) translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.4); z-index: 1000 !important; }
+
+        /* POPUP STYLING */
+        .leaflet-popup-content-wrapper { border-radius: 20px; box-shadow: var(--shadow-lg); padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.5); }
+        .leaflet-popup-content { margin: 0; width: 360px !important; }
+        .popup-header { color: white; padding: 24px; position: relative; overflow: hidden; }
+        .popup-header::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, rgba(0,0,0,0.2), transparent); }
+        .popup-header h3 { margin: 0 0 6px 0; font-size: 1.3rem; font-weight: 800; position: relative; z-index: 1; }
+        .popup-header p { margin: 0; font-size: 0.85rem; font-weight: 600; opacity: 0.95; position: relative; z-index: 1; display: flex; gap: 6px; align-items: flex-start; }
+        
+        .popup-body { padding: 24px; background: var(--surface); max-height: 400px; overflow-y: auto; }
+        .popup-body::-webkit-scrollbar { width: 6px; }
+        .popup-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .popup-section { margin-bottom: 16px; }
+        .popup-section h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; }
+        .popup-section p { font-size: 0.9rem; color: var(--text-main); font-weight: 500; line-height: 1.6; text-align: justify; }
+        .leaflet-container a.leaflet-popup-close-button { color: white; padding: 12px; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+        @media (max-width: 1024px) {
+            body { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+            .sidebar { width: 100%; height: auto; max-height: 45vh; order: 2; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
+            .main-content { order: 1; height: auto; min-height: 55vh; }
+            .map-section { height: 50vh; flex: none; }
+            .analytics-panel { height: auto; flex-wrap: wrap; order: 3; padding: 15px; }
+            .metric-card { flex: 1 1 calc(50% - 15px); min-width: 140px; padding: 15px; }
+            .metric-card .value { font-size: 2rem; }
+            .chart-container { flex: 1 1 100%; height: 250px; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-logo">
+                <div class="icon-box"><i class="fas fa-hand-holding-heart"></i></div>
+                <div class="brand-text">
+                    <h2>Rumah Zakat</h2>
+                    <span>Peta Berdaya Sumut</span>
+                </div>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Cari lokasi, relawan, atau program...">
+            </div>
+        </div>
+        <div class="list-container" id="villageList"></div>
+    </div>
+
+    <div class="main-content">
+        <div class="map-controls">
+            <button class="control-btn active" id="btnMapDesign" onclick="switchMapStyle('design')"><i class="fas fa-layer-group"></i> Visual</button>
+            <button class="control-btn" id="btnMapSat" onclick="switchMapStyle('satellite')"><i class="fas fa-satellite"></i> Satelit</button>
+        </div>
+
+        <div class="map-section">
+            <div id="map"></div>
+        </div>
+
+        <div class="analytics-panel">
+            <div class="metric-card">
+                <i class="fas fa-map-marked-alt icon-bg"></i>
+                <h4>Total Titik Binaan</h4>
+                <div class="value counter" data-target="0" id="val-titik">0</div>
+                <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted);">Tersebar di Sumatera Utara</span>
+            </div>
+            <div class="metric-card">
+                <i class="fas fa-child icon-bg"></i>
+                <h4>Titik Anak Juara</h4>
+                <div class="value counter" data-target="0" id="val-anak" style="color: var(--c-anak)">0</div>
+                <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted);">Area Pendampingan Beasiswa</span>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Source Final (Atribut PM dihapus murni)
+        const desaData = [
+            { id: 1, relawan: "Darwin Sati", desa: "Tebing Linggahara, Labuhanbatu", kategori: "Kesehatan", alamat: "Dusun Siluman A. Desa Tebing Linggahara. Kec Bilah Barat.", program: "Program Desa Ramah Lansia yang dirancang khusus untuk meningkatkan kualitas hidup para lansia melalui layanan kesehatan Posyandu terpadu, rutinitas senam kebugaran, serta pendampingan spiritual melalui Majelis Taklim.", dampak: "Terciptanya ekosistem lansia yang mandiri, aktif, dan terpantau riwayat kesehatannya secara berkala.", potensi: "Posyandu lansia digital, pelatihan kader.", lat: 2.115, lng: 99.821 },
+            { id: 2, relawan: "Junaidi S. Piliang", desa: "Aek Sitio Tio, Tapteng", kategori: "Ekonomi", alamat: "Kelurahan Aek Sitio tio Kec. Pandan", program: "Pemberdayaan ekonomi masyarakat berbasis potensi lokal, diselaraskan dengan program pembinaan akidah dan pendampingan intensif bagi para Mualaf agar mandiri secara finansial dan spiritual.", dampak: "Peningkatan kemandirian kelompok usaha lokal serta penguatan akidah warga mualaf di area pembinaan.", potensi: "Pengembangan sentra pertanian.", lat: 1.735, lng: 98.825 },
+            { id: 3, relawan: "Nurhasanah", desa: "Sahkuda Bayu, Simalungun", kategori: "Pendidikan", alamat: "Nagori Sahkuda Bayu kec. Gunung Malela", program: "Pusat pendidikan Al-Qur'an melalui Rumah Quran Tabassam, berfokus pada pemberantasan buta huruf Al-Qur'an bagi anak-anak dan remaja desa, serta pembentukan karakter Islami sejak dini.", dampak: "Menurunnya tingkat buta aksara Al-Qur'an secara signifikan di kalangan generasi muda desa.", potensi: "Ekspansi ke bidang kesehatan masyarakat.", lat: 3.033, lng: 99.166 },
+            { id: 4, relawan: "Jiah Mila", desa: "Dadimulyo, Asahan", kategori: "Kesehatan", alamat: "Kel. Dadimulyo kec. Kisaran Barat", program: "Program Pembinaan Lansia Terpadu yang mencakup pendampingan spiritual, pengajaran baca tulis Al-Qur'an dasar, dan layanan cek kesehatan berkala untuk mewujudkan masa tua yang produktif dan bahagia.", dampak: "Para lansia kini memiliki kemampuan dasar membaca Al-Qur'an dan mulai meninggalkan praktik-praktik mistis (kejawen).", potensi: "Sentra batu bata, penitipan ternak.", lat: 2.983, lng: 99.616 },
+            { id: 5, relawan: "M. Firdaus", desa: "Silomlom, Asahan", kategori: "Pendidikan", alamat: "Dusun 2 Desa Silomlom, kec. Simpang Empat", program: "Layanan pendidikan Islam yang telah berjalan selama 8 tahun melalui Rumah Qur'an dan Kelas Tahfidz, mencetak generasi penghafal Al-Qur'an dengan pendampingan tajwid dan makharijul huruf yang komprehensif.", dampak: "Meluluskan santri-santri yang berhasil mencapai target hafalan dengan kualitas tajwid yang baik.", potensi: "Sinergi dengan Pertanian lokal.", lat: 2.916, lng: 99.683 },
+            { id: 6, relawan: "Suyatno", desa: "Tumpatan, Deli Serdang", kategori: "Ekonomi", alamat: "Desa Tumpatan Kec. Beringin", program: "Program pengembangan skill atau keahlian masyarakat melalui Rumah Vokasi, diiringi bantuan modal dan pelatihan kewirausahaan agar warga desa memiliki daya saing dan penghasilan mandiri.", dampak: "Tersedianya tenaga terampil di desa yang mampu membuka lapangan pekerjaan skala mikro.", potensi: "Modernisasi sistem Pertanian.", lat: 3.633, lng: 98.883 },
+            { id: 7, relawan: "Ahmad Fauzi", desa: "Suka Maju, Batu Bara", kategori: "Kesehatan", alamat: "Desa Suka Maju Kec. Tanjung Tiram", program: "Intervensi kesehatan dan pemenuhan gizi yang terstruktur selama 5 tahun melalui program Desa Bebas Stunting, meliputi edukasi gizi ibu hamil, pemberian makanan tambahan (PMT), dan pendampingan pola asuh.", dampak: "Berhasil mengentaskan status stunting pada puluhan anak di wilayah intervensi.", potensi: "Potensi ekonomi pesisir.", lat: 3.183, lng: 99.616 },
+            { id: 8, relawan: "Husni Thamrin", desa: "Binjai Serbangan, Asahan", kategori: "Pendidikan", alamat: "Jalan Protokol kel. Binjai Serbangan", program: "Penyediaan fasilitas Rumah Quran sebagai wadah utama pendidikan agama anak-anak desa, memberikan pengajaran tahsin, tajwid, serta pembinaan akhlak mulia sebagai fondasi generasi masa depan.", dampak: "Santri binaan berhasil memberikan kontribusi dan prestasi di ajang MTQ tingkat kabupaten.", potensi: "Ekonomi tanaman sayur mayur.", lat: 3.016, lng: 99.650 },
+            { id: 9, relawan: "Yogie Amida", desa: "Helvetia, Deli Serdang", kategori: "Ekonomi", alamat: "Jl veteran desa Helvetia", program: "Program Bantuan Wirausaha (Senyum Mandiri) yang tidak hanya memberikan modal usaha bagi UMKM lokal, tetapi juga pendampingan manajemen bisnis, pemasaran, dan pembukuan keuangan sederhana.", dampak: "Meningkatkan resiliensi atau ketahanan bisnis para pelaku UMKM binaan di tengah tantangan ekonomi.", potensi: "Desa perdagangan padat penduduk.", lat: 3.616, lng: 98.633 },
+            { id: 10, relawan: "Patwa Riski", desa: "Ladang Tengah, Tapteng", kategori: "Pendidikan", alamat: "Desa Ladang Tengah", program: "Dedikasi 6 tahun pembinaan moral dan spiritual anak-anak melalui Rumah Qur'an. Program ini membekali generasi muda desa dengan kemampuan tartil, hafalan juz 'amma, serta pemahaman ibadah harian.", dampak: "Tumbuhnya generasi muda desa yang mahir dalam membaca dan mengamalkan nilai-nilai Al Qur'an.", potensi: "Pertanian komersial.", lat: 2.016, lng: 98.433 },
+            { id: 11, relawan: "Ernawati", desa: "Simatorkis, Paluta", kategori: "Pendidikan", alamat: "Desa Simatorkis kec. Dolok", program: "Rumah Qur'an yang telah berbakti selama 7 tahun, berfokus pada tahfidz usia dini dan pembentukan lingkungan desa yang agamis melalui kelas-kelas tahsin mingguan bagi warga setempat.", dampak: "Mencetak anak-anak pedesaan menjadi generasi penghafal Al-Qur'an sejak usia dini.", potensi: "Peternakan kambing dan sapi.", lat: 1.516, lng: 99.633 },
+            { id: 12, relawan: "Eprianto Limbong", desa: "Kuta Dame", kategori: "Pendidikan", alamat: "Desa Kuta Dame", program: "Sinergi pendidikan antar generasi melalui Rumah Quran untuk anak-anak dan Majelis Taklim terpadu untuk orang dewasa, menciptakan ekosistem keislaman yang kuat di tingkat pedesaan.", dampak: "Terjadinya perubahan masif pada peningkatan kualitas ibadah dan kesadaran agama warga desa.", potensi: "Wisata Desa.", lat: 2.650, lng: 98.250 },
+            
+            // Program Beasiswa Anak Juara
+            { id: 13, relawan: "Relawan Anak Juara", desa: "Tanjung Rejo, Sunggal", kategori: "Anak Juara", alamat: "Medan Sunggal", program: "Program pendampingan Beasiswa Anak Juara yang tidak sekadar memberikan bantuan biaya pendidikan formal, melainkan juga menyertakan mentoring pembinaan karakter, soft skill, dan kapasitas akademik.", dampak: "Memastikan anak-anak pra-sejahtera tetap mendapatkan akses pendidikan berkualitas dan pendampingan moral.", potensi: "Pendampingan beasiswa & soft skill.", lat: 3.5852, lng: 98.6256 },
+            { id: 14, relawan: "Relawan Anak Juara", desa: "Rengas Pulau, Marelan", kategori: "Anak Juara", alamat: "Medan Marelan", program: "Program pendampingan Beasiswa Anak Juara yang komprehensif, mengawal perkembangan akademik dan non-akademik anak-anak dari keluarga pra-sejahtera agar bisa menggapai cita-citanya.", dampak: "Menurunkan potensi putus sekolah di kawasan pesisir/pinggiran kota.", potensi: "Peningkatan kapasitas akademik.", lat: 3.7083, lng: 98.6536 },
+            { id: 15, relawan: "Relawan Anak Juara", desa: "Binjai Kota, Binjai", kategori: "Anak Juara", alamat: "Binjai Kota", program: "Pemberian Beasiswa Anak Juara yang diintegrasikan dengan pembinaan keagamaan dan motivasi belajar rutin, guna menumbuhkan semangat pantang menyerah bagi generasi muda.", dampak: "Menciptakan ekosistem belajar yang positif dan suportif di luar jam sekolah formal.", potensi: "Kelas inspirasi.", lat: 3.6069, lng: 98.4844 },
+            { id: 16, relawan: "Relawan Anak Juara", desa: "Sidodadi, Biru Biru", kategori: "Anak Juara", alamat: "Biru Biru", program: "Bantuan pendidikan beasiswa berkelanjutan (Anak Juara) yang disertai dengan pelaporan perkembangan psikososial anak, memastikan mereka tumbuh di lingkungan yang sehat.", dampak: "Meningkatnya kepercayaan diri dan kemampuan bersosialisasi anak-anak binaan.", potensi: "Pemberdayaan sosial anak.", lat: 3.4217, lng: 98.6833 },
+            { id: 17, relawan: "Relawan Anak Juara", desa: "Tembung, Medan Tembung", kategori: "Anak Juara", alamat: "Medan Tembung", program: "Dukungan nyata lewat Beasiswa Anak Juara, berfokus pada meminimalisir angka putus sekolah dan memberikan bimbingan belajar tambahan serta edukasi kemandirian sejak dini.", dampak: "Terbentuknya kemandirian dasar pada anak-anak usia sekolah dalam mengatur kegiatan belajarnya.", potensi: "Literasi digital.", lat: 3.5978, lng: 98.7153 },
+            { id: 18, relawan: "Relawan Anak Juara", desa: "Tegal Sari Mandala III", kategori: "Anak Juara", alamat: "Medan Denai", program: "Penyaluran beasiswa bulanan Anak Juara yang dipadukan dengan pembekalan life skill (keterampilan hidup) dan akhlak Islami, untuk mempersiapkan generasi tangguh.", dampak: "Anak-anak binaan memiliki bekal adab dan kedisiplinan yang diimplementasikan sehari-hari.", potensi: "Keterampilan vokasional anak.", lat: 3.5678, lng: 98.7111 },
+            { id: 19, relawan: "Relawan RZ", desa: "Padang Bulan Selayang I", kategori: "Pendidikan", alamat: "HJGX+8CC, Jl. Sei Belutu", program: "Pusat pembelajaran baca tulis Al-Qur'an melalui Rumah Quran Juara, dirancang untuk menjadi inkubator santri berprestasi dengan kurikulum tahsin intensif dan pendidikan adab sehari-hari.", dampak: "Terciptanya fasilitas mengaji yang sangat aktif sebagai sentra kegiatan Islami anak-anak sekitar.", potensi: "Optimalisasi sarana & ekstrakurikuler Islami.", lat: 3.5686, lng: 98.6417 },
+            
+            // SD JUARA
+            { id: 20, relawan: "Kepala Sekolah", desa: "SD Juara Medan", kategori: "Pendidikan", alamat: "Jl. Sei Bekala No.02, Babura, Kec. Medan Baru, Kota Medan", program: "Lembaga pendidikan formal tingkat Sekolah Dasar (SD) dari Rumah Zakat yang dirancang untuk memberikan layanan pendidikan dasar berkualitas secara gratis (atau bersubsidi), dengan memadukan kurikulum nasional dan nilai-nilai keislaman terpadu.", dampak: "Menyediakan akses pendidikan formal eksklusif untuk membangun generasi cerdas, berkarakter unggul, dan berlandaskan akidah Islam yang kuat.", potensi: "Pengembangan sarana prasarana sekolah, sinergi donatur untuk beasiswa penuh, dan ekstrakurikuler berbasis life skill.", lat: 3.5786, lng: 98.6534 }
+        ];
+
+        // Map Engine Initialization
+        const sumutBounds = L.latLngBounds([ [0.1, 97.0], [4.6, 100.5] ]);
+        const map = L.map('map', { zoomControl: false, maxBounds: sumutBounds, maxBoundsViscosity: 0.8, minZoom: 7 }).setView([2.8, 98.9], 8);
+        L.control.zoom({ position: 'topleft' }).addTo(map);
+
+        const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 });
+        const googleSatLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['0','1','2','3'] });
+        cartoLayer.addTo(map);
+
+        function switchMapStyle(style) {
+            document.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+            if(style === 'design') {
+                map.removeLayer(googleSatLayer); cartoLayer.addTo(map);
+                document.getElementById('btnMapDesign').classList.add('active');
+            } else {
+                map.removeLayer(cartoLayer); googleSatLayer.addTo(map);
+                document.getElementById('btnMapSat').classList.add('active');
+            }
+        }
+
+        // Charts
+        let categoryChart;
+        function initCharts(data) {
+            const colors = { 'Pendidikan': '#0ea5e9', 'Kesehatan': '#ec4899', 'Ekonomi': '#eab308', 'Anak Juara': '#8b5cf6' };
+            let catCount = { 'Pendidikan': 0, 'Kesehatan': 0, 'Ekonomi': 0, 'Anak Juara': 0 };
+            data.forEach(d => catCount[d.kategori]++);
+
+            if(categoryChart) categoryChart.destroy();
+            const ctxDonut = document.getElementById('categoryChart').getContext('2d');
+            categoryChart = new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: { labels: Object.keys(catCount), datasets: [{ data: Object.values(catCount), backgroundColor: Object.keys(catCount).map(k => colors[k]), borderWidth: 0, hoverOffset: 8 }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '65%', 
+                    plugins: { 
+                        legend: { position: 'right', labels: { font: { family: 'Plus Jakarta Sans', weight: 'bold', size: 12 } } } 
+                    } 
+                }
+            });
+        }
+
+        // Animated Counters Engine
+        function animateCounter(id, targetValue) {
+            const el = document.getElementById(id);
+            let start = 0;
+            const duration = 1000;
+            
+            clearInterval(el.timer);
+            if(targetValue === 0) { el.innerText = 0; return; }
+            
+            el.timer = setInterval(() => {
+                start += Math.ceil(targetValue / 20);
+                if (start >= targetValue) {
+                    el.innerText = targetValue;
+                    clearInterval(el.timer);
+                } else {
+                    el.innerText = start;
+                }
+            }, 50);
+        }
+
+        function updateMetrics(data) {
+            const titik = data.length;
+            // Menghitung JUMLAH LOKASI Anak Juara, bukan PM
+            const lokasiAnakJuara = data.filter(d => d.kategori === 'Anak Juara').length;
+            
+            animateCounter('val-titik', titik);
+            animateCounter('val-anak', lokasiAnakJuara);
+        }
+
+        function getColorParams(kategori) {
+            if(kategori === 'Pendidikan') return { color: 'var(--c-edu)', icon: 'fa-book-open' };
+            if(kategori === 'Kesehatan') return { color: 'var(--c-health)', icon: 'fa-heartbeat' };
+            if(kategori === 'Anak Juara') return { color: 'var(--c-anak)', icon: 'fa-child' };
+            return { color: 'var(--c-eco)', icon: 'fa-chart-line' }; 
+        }
+
+        // Render Dashboard
+        let markers = [];
+        function renderDashboard(data) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            
+            const listContainer = document.getElementById('villageList');
+            listContainer.innerHTML = '';
+            
+            updateMetrics(data);
+            initCharts(data);
+
+            data.forEach(item => {
+                const style = getColorParams(item.kategori);
+
+                // Sidebar Card Generation
+                const card = document.createElement('div');
+                card.className = 'cardItem';
+                card.style.setProperty('--primary', style.color);
+                card.innerHTML = `
+                    <h3>${item.desa}</h3>
+                    <p><i class="fas fa-map-marker-alt" style="color:${style.color}; margin-top:3px;"></i> <span>${item.alamat}</span></p>
+                    <div class="card-stats">
+                        <span class="badge" style="background:${style.color}">${item.kategori}</span>
+                        <div class="pic-name"><i class="fas fa-user-circle"></i> <span>${item.relawan}</span></div>
+                    </div>
+                `;
+                
+                // HTML Custom Leaflet Marker
+                const customIcon = L.divIcon({
+                    className: 'custom-icon-wrapper',
+                    html: `<div class="custom-marker" style="background-color: ${style.color};"><i class="fas ${style.icon}"></i></div>`,
+                    iconSize: [42, 42],
+                    iconAnchor: [21, 21],
+                    popupAnchor: [0, -20]
+                });
+
+                const marker = L.marker([item.lat, item.lng], { icon: customIcon });
+
+                const popupContent = `
+                    <div class="popup-header" style="background-color: ${style.color}">
+                        <h3>${item.desa}</h3>
+                        <p><i class="fas fa-id-badge"></i> <span>PIC: ${item.relawan}</span></p>
+                    </div>
+                    <div class="popup-body">
+                        <div class="popup-section">
+                            <h4><i class="fas fa-bullseye"></i> Gambaran Program</h4>
+                            <p>${item.program}</p>
+                        </div>
+                        <div class="popup-section" style="background: var(--bg-color); padding: 14px; border-radius: 12px; border: 1px solid var(--border); border-left: 4px solid ${style.color};">
+                            <h4 style="color: ${style.color}; font-size: 0.8rem;"><i class="fas fa-leaf"></i> Dampak Terukur</h4>
+                            <p style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-top:6px;">
+                                ${item.dampak}
+                            </p>
+                        </div>
+                        <div class="popup-section">
+                            <h4><i class="fas fa-chart-line"></i> Potensi Sinergi & Pengembangan</h4>
+                            <p><strong>${item.potensi}</strong></p>
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent).addTo(map);
+                markers.push(marker);
+
+                // Interactions
+                card.addEventListener('click', () => {
+                    map.flyTo([item.lat, item.lng], 14, { duration: 1.5, easeLinearity: 0.25 });
+                    setTimeout(() => marker.openPopup(), 1500);
+                });
+
+                listContainer.appendChild(card);
+            });
+        }
+
+        // Search Engine
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            const filtered = desaData.filter(d => 
+                d.desa.toLowerCase().includes(q) || 
+                d.program.toLowerCase().includes(q) || 
+                d.relawan.toLowerCase().includes(q) || 
+                d.kategori.toLowerCase().includes(q) ||
+                d.alamat.toLowerCase().includes(q)
+            );
+            renderDashboard(filtered);
+        });
+
+        // Init
+        window.onload = () => {
+            renderDashboard(desaData);
+            setTimeout(() => map.flyToBounds(sumutBounds, { padding: [30, 30], duration: 2 }), 600);
+        };
+    </script>
+</body>
+</html>
